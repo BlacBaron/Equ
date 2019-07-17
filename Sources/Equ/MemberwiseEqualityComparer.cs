@@ -20,9 +20,9 @@
         // ReSharper disable once StaticMemberInGenericType
         private static readonly Regex _autoPropertyBackingFieldRegex = new Regex("^<([a-zA-Z][a-zA-Z0-9]*)>k__BackingField$");
 
-        private readonly Func<object, object, bool> _equalsFunc;
+        private readonly Func<T, T, bool> _equalsFunc;
 
-        private readonly Func<object, int> _getHashCodeFunc;
+        private readonly Func<T, int> _getHashCodeFunc;
 
         private static readonly Lazy<MemberwiseEqualityComparer<T>> _fieldsComparer =
             new Lazy<MemberwiseEqualityComparer<T>>(
@@ -53,8 +53,8 @@
 
         private MemberwiseEqualityComparer(EqualityFunctionGenerator equalityFunctionGenerator)
         {
-            _equalsFunc = equalityFunctionGenerator.MakeEqualsMethod();
-            _getHashCodeFunc = equalityFunctionGenerator.MakeGetHashCodeMethod();
+            _equalsFunc = equalityFunctionGenerator.MakeEqualsMethod<T>();
+            _getHashCodeFunc = equalityFunctionGenerator.MakeGetHashCodeMethod<T>();
         }
 
         private static IEnumerable<FieldInfo> AllFieldsExceptIgnored(Type t)
@@ -108,10 +108,17 @@
             {
                 return true;
             }
+
             if (ReferenceEquals(null, x) || ReferenceEquals(null, y))
             {
                 return false;
             }
+
+            if (x.GetType() != y.GetType())
+            {
+                return false;
+            }
+
             return _equalsFunc(x, y);
         }
 

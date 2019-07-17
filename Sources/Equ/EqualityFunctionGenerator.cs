@@ -40,18 +40,15 @@ namespace Equ
         /// the generation only takes place once per type. This can be achieved e.g. by storing the function in a static
         /// readonly field.
         /// </summary>
-        public Func<object, int> MakeGetHashCodeMethod()
+        public Func<ObjectType, int> MakeGetHashCodeMethod<ObjectType>()
         {
-            var objRaw = Expression.Parameter(typeof(object), "obj");
-
-            // cast to the concrete type
-            var objParam = Expression.Convert(objRaw, _type);
+            var objRaw = Expression.Parameter(typeof(ObjectType), "obj");
 
             // compound XOR expression
-            var getHashCodeExprs = GetIncludedMembers(_type).Select(mi => MakeGetHashCodeExpression(mi, objParam));
+            var getHashCodeExprs = GetIncludedMembers(_type).Select(mi => MakeGetHashCodeExpression(mi, objRaw));
             var xorChainExpr = getHashCodeExprs.Aggregate((Expression)Expression.Constant(29), LinkHashCodeExpression);
             
-            return Expression.Lambda<Func<object, int>>(xorChainExpr, objRaw).Compile();
+            return Expression.Lambda<Func<ObjectType, int>>(xorChainExpr, objRaw).Compile();
         }
 
         /// <summary>
@@ -59,27 +56,19 @@ namespace Equ
         /// the generation only takes place once per type. This can be achieved e.g. by storing the function in a static
         /// readonly field.
         /// </summary>
-        public Func<object, object, bool> MakeEqualsMethod()
+        public Func<ObjectType, ObjectType, bool> MakeEqualsMethod<ObjectType>()
         {
-            var leftRaw = Expression.Parameter(typeof(object), "left");
-            var rightRaw = Expression.Parameter(typeof(object), "right");
-
-            // cast to the concrete type
-            var leftParam = Expression.Convert(leftRaw, _type);
-            var rightParam = Expression.Convert(rightRaw, _type);
+            var leftRaw = Expression.Parameter(typeof(ObjectType), "left");
+            var rightRaw = Expression.Parameter(typeof(ObjectType), "right");
 
             // AND expression using short-circuit evaluation
-            var equalsExprs = GetIncludedMembers(_type).Select(mi => MakeEqualsExpression(mi, leftParam, rightParam));
+            var equalsExprs = GetIncludedMembers(_type).Select(mi => MakeEqualsExpression(mi, leftRaw, rightRaw));
             var andChainExpr = equalsExprs.Aggregate((Expression)Expression.Constant(true), Expression.AndAlso);
 
             // call Object.Equals if second parameter doesn't match type
             var objectEqualsExpr = Expression.Equal(leftRaw, rightRaw);
-            var useTypedEqualsExpression = Expression.Condition(
-                Expression.TypeIs(rightRaw, _type),
-                andChainExpr,
-                objectEqualsExpr);
 
-            return Expression.Lambda<Func<object, object, bool>>(useTypedEqualsExpression, leftRaw, rightRaw).Compile();
+            return Expression.Lambda<Func<ObjectType, ObjectType, bool>>(andChainExpr, leftRaw, rightRaw).Compile();
         }
 
         private IEnumerable<MemberInfo> GetIncludedMembers(Type type)
@@ -100,11 +89,19 @@ namespace Equ
 
             var memberType = leftMemberExpr.Type;
 
-            if (leftMemberExpr.Type.GetTypeInfo().IsValueType)
+            var leftTypeInfo = leftMemberExpr.Type.GetTypeInfo();
+            if (leftTypeInfo.IsValueType)
             {
-                var boxedLeftMemberExpr = Expression.Convert(leftMemberExpr, typeof(object));
-                var boxedRightMemberExpr = Expression.Convert(rightMemberExpr, typeof(object));
-                return MakeReferenceTypeEqualExpression(boxedLeftMemberExpr, boxedRightMemberExpr);
+                if (leftTypeInfo.IsPrimitive || leftTypeInfo.IsEnum || leftTypeInfo.GetMethod("op_Equality") != null)
+                {
+                    return Expression.Equal(leftMemberExpr, rightMemberExpr);
+                }
+                else
+                {
+                    var boxedLeftMemberExpr = Expression.Convert(leftMemberExpr, typeof(object));
+                    var boxedRightMemberExpr = Expression.Convert(rightMemberExpr, typeof(object));
+                    return MakeReferenceTypeEqualExpression(boxedLeftMemberExpr, boxedRightMemberExpr);
+                }
             }
             if (IsSequenceType(memberType))
             {
