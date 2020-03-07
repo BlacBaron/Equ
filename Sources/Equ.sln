@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Equ", "Equ\Equ.csproj", "{D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Equ.Test", "Equ.Test\Equ.Test.csproj", "{DAFBF19C-13DC-4FE7-A777-262EF7E7600B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Equ.Benchmark", "Equ.Benchmark\Equ.Benchmark.csproj", "{16D5FF8E-FCB8-442E-B297-0E02BBB0D745}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{DAFBF19C-13DC-4FE7-A777-262EF7E7600B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAFBF19C-13DC-4FE7-A777-262EF7E7600B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAFBF19C-13DC-4FE7-A777-262EF7E7600B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16D5FF8E-FCB8-442E-B297-0E02BBB0D745}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16D5FF8E-FCB8-442E-B297-0E02BBB0D745}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16D5FF8E-FCB8-442E-B297-0E02BBB0D745}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16D5FF8E-FCB8-442E-B297-0E02BBB0D745}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
