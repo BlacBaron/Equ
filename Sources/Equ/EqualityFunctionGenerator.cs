@@ -99,11 +99,38 @@ namespace Equ
 
             var memberType = leftMemberExpr.Type;
 
-            if (leftMemberExpr.Type.GetTypeInfo().IsValueType)
+            var leftTypeInfo = leftMemberExpr.Type.GetTypeInfo();
+            if (leftTypeInfo.IsValueType)
             {
-                var boxedLeftMemberExpr = Expression.Convert(leftMemberExpr, typeof(object));
-                var boxedRightMemberExpr = Expression.Convert(rightMemberExpr, typeof(object));
-                return MakeReferenceTypeEqualExpression(boxedLeftMemberExpr, boxedRightMemberExpr);
+                var opEqualityMethods = leftTypeInfo.GetMethods()
+                    .Any(
+                        m => m.Name == "op_Equality"
+                             && m.IsStatic
+                             && m.GetParameters().Length == 2 
+                             && m.GetParameters()[0].ParameterType == memberType
+                             && m.GetParameters()[1].ParameterType == memberType);
+                if (leftTypeInfo.IsPrimitive || leftTypeInfo.IsEnum || opEqualityMethods)
+                {
+                    return Expression.Equal(leftMemberExpr, rightMemberExpr);
+                }
+                else
+                {
+                    var equalsMethod = leftTypeInfo.GetMethods()
+                        .FirstOrDefault(
+                            m => m.Name == "Equals" 
+                                 && m.GetParameters().Length == 1 
+                                 && m.GetParameters()[0].ParameterType == memberType);
+                    if (equalsMethod != null)
+                    {
+                        return Expression.Call(leftMemberExpr, equalsMethod, rightMemberExpr);
+                    }
+                    else
+                    {
+                        var boxedLeftMemberExpr = Expression.Convert(leftMemberExpr, typeof(object));
+                        var boxedRightMemberExpr = Expression.Convert(rightMemberExpr, typeof(object));
+                        return MakeReferenceTypeEqualExpression(boxedLeftMemberExpr, boxedRightMemberExpr);
+                    }
+                }
             }
 
             return ReflectionUtils.IsSequenceType(memberType)
@@ -127,15 +154,41 @@ namespace Equ
             var memberAccessAsObjExpr = Expression.Convert(memberAccessExpr, typeof(object));
 
             var memberType = memberAccessExpr.Type;
+            var memberTypeInfo = memberType.GetTypeInfo();
 
-            var getHashCodeExpr = ReflectionUtils.IsSequenceType(memberType)
-                ? MakeCallOnSequenceEqualityComparerExpression("GetHashCode", memberType, memberAccessExpr)
-                : Expression.Call(memberAccessAsObjExpr, "GetHashCode", Type.EmptyTypes);
-
-            return Expression.Condition(
-                Expression.ReferenceEqual(Expression.Constant(null), memberAccessAsObjExpr), // If member is null
-                Expression.Constant(0), // Return 0
-                getHashCodeExpr); // Return the actual getHashCode call
+            Expression getHashCodeExpr;
+            if (ReflectionUtils.IsSequenceType(memberType))
+            {
+                getHashCodeExpr = MakeCallOnSequenceEqualityComparerExpression(
+                    "GetHashCode",
+                    memberType,
+                    memberAccessExpr);
+                
+                return Expression.Condition(
+                    Expression.ReferenceEqual(Expression.Constant(null), memberAccessAsObjExpr), // If member is null
+                    Expression.Constant(0), // Return 0
+                    getHashCodeExpr); // Return the actual getHashCode call
+            }
+            else if (memberTypeInfo.IsValueType)
+            {
+                if (memberTypeInfo.IsPrimitive || memberTypeInfo.IsEnum) 
+                {
+                    getHashCodeExpr = Expression.Convert(memberAccessExpr, typeof(int));
+                }
+                else
+                {
+                    getHashCodeExpr = Expression.Call(memberAccessExpr, "GetHashCode", Type.EmptyTypes);
+                }
+                return getHashCodeExpr; // Return the actual getHashCode call
+            }
+            else
+            {
+                getHashCodeExpr = Expression.Call(memberAccessAsObjExpr, "GetHashCode", Type.EmptyTypes);
+                return Expression.Condition(
+                    Expression.ReferenceEqual(Expression.Constant(null), memberAccessAsObjExpr), // If member is null
+                    Expression.Constant(0), // Return 0
+                    getHashCodeExpr); // Return the actual getHashCode call
+            }
         }
 
         private static Expression MakeCallOnSequenceEqualityComparerExpression(string methodName, Type enumerableType, params Expression[] parameterExpressions)
