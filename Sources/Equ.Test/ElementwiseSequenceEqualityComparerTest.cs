@@ -147,5 +147,16 @@
             Assert.False(comparer.Equals(set1, set2));
             Assert.NotEqual(comparer.GetHashCode(set1), comparer.GetHashCode(set2));
         }
+
+        [Fact]
+        public void Comparer_handles_null()
+        {
+            var comparer = new ElementwiseSequenceEqualityComparer<IEnumerable<int>>();
+            Assert.Equal(0, comparer.GetHashCode(null));
+            
+            Assert.False(comparer.Equals(null, new []{0}));
+            Assert.False(comparer.Equals(new []{0}, null));
+        }
+        
     }
 }

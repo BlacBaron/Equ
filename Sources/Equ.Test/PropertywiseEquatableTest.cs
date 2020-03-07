@@ -1,5 +1,7 @@
 ﻿namespace Equ.Test
 {
+    using System;
+
     using Equ;
 
     using Xunit;
@@ -93,6 +95,29 @@
                     return val;
                 }
             }
+        }
+        
+        private class MyBadClass : PropertywiseEquatable<string>
+        {
+        }
+        
+        [Fact]
+        public void Assert_badly_constructed_class_throws()
+        {
+            Assert.Throws<TypeInitializationException>(
+                () =>
+                {
+                    var badClass = new MyBadClass();
+                });
+        }
+        
+        [Fact]
+        public void Check_basic_equals_checks()
+        {
+            var testValue = new ValueType("test", 23);
+            Assert.False(testValue.Equals((object)null));
+            Assert.True(testValue.Equals((object)testValue));
+            Assert.False(testValue.Equals("fred"));
         }
     }
 }

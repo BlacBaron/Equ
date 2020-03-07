@@ -2,6 +2,7 @@
 // ReSharper disable UnusedAutoPropertyAccessor.Local
 namespace Equ.Test
 {
+    using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Linq;
@@ -267,6 +268,29 @@ namespace Equ.Test
             }
         }
 
+        private class MyBadClass : MemberwiseEquatable<string>
+        {
+        }
+        
+        [Fact]
+        public void Assert_badly_constructed_class_throws()
+        {
+            Assert.Throws<TypeInitializationException>(
+                () =>
+                {
+                    var badClass = new MyBadClass();
+                });
+        }
+
+        [Fact]
+        public void Check_basic_equals_checks()
+        {
+            var testValue = new ValueType2("test");
+            Assert.False(testValue.Equals((object)null));
+            Assert.True(testValue.Equals((object)testValue));
+            Assert.False(testValue.Equals("fred"));
+        }
+        
         // ReSharper restore NotAccessedField.Local
     }
 }
